@@ -116,9 +116,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="avrcore.c" />
+    <ClCompile Include="avrio.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="avrcore.h" />
+    <ClInclude Include="avrio.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\README.md" />

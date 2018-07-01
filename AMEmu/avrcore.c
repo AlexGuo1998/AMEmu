@@ -51,11 +51,12 @@
 
 
 #define CheckSRAMAddr(addr) ((uint16_t)(addr) <= 0xAFF)
+#define CheckROMAddr(addr) ((uint16_t)(addr) <= (32 * 1024))
 
 inline static bool MemWrite(AVRMCU *u, uint16_t addr, uint8_t data) {
-	if (addr >= 0x20 && addr <= 0xFF) {
-		//IO
-		//TODO IO callback
+	if (addr >= 0x20 && addr <= 0xFF && u->iowrite[addr - 0x20] != NULL) {
+		//IO callback
+		u->iowrite[addr - 0x20](u, (uint8_t)addr, data);
 	} else {
 		//direct
 		if (!CheckSRAMAddr(addr)) {
@@ -67,9 +68,9 @@ inline static bool MemWrite(AVRMCU *u, uint16_t addr, uint8_t data) {
 }
 
 inline static bool MemRead(AVRMCU *u, uint16_t addr, uint8_t *data) {
-	if (addr >= 0x20 && addr <= 0xFF) {
-		//IO
-		//TODO IO callback
+	if (addr >= 0x20 && addr <= 0xFF && u->ioread[addr - 0x20] != NULL) {
+		//IO callback
+		*data = u->ioread[addr - 0x20](u, (uint8_t)addr);
 	} else {
 		//direct
 		if (!CheckSRAMAddr(addr)) {
@@ -80,7 +81,19 @@ inline static bool MemRead(AVRMCU *u, uint16_t addr, uint8_t *data) {
 	return true;
 }
 
+inline static bool RomRead(AVRMCU *u, uint16_t addr, uint8_t *data) {
+	if (!CheckROMAddr(addr)) {
+		return false;
+	}
+	*data = (u->rom[addr >> 1] >> ((addr & 1) ? 8 : 0)) & 0xFF;
+	return true;
+}
+
 inline static bool PushPC(AVRMCU *u) {
+	assert(u->ioread[SPL - 0x20] == NULL);
+	assert(u->ioread[SPH - 0x20] == NULL);
+	assert(u->iowrite[SPL - 0x20] == NULL);
+	assert(u->iowrite[SPH - 0x20] == NULL);
 	uint16_t sp = (u->sram[SPH] << 8) | u->sram[SPL];
 	//WARNING: Wrong operation when SP -> SP
 	//push
@@ -93,6 +106,8 @@ inline static bool PushPC(AVRMCU *u) {
 }
 
 int avr_runstep(AVRMCU *u) {
+	assert(u->ioread[SREG - 0x20] == NULL);
+	assert(u->iowrite[SREG - 0x20] == NULL);
 	int cycle = 1;
 	uint16_t inst = u->rom[u->pc];
 	u->pc++;
@@ -463,12 +478,336 @@ int avr_runstep(AVRMCU *u) {
 				assert(ret);
 			} else {
 				//1001 xxxx xxxx xxxx
-				//TODO
+				switch ((inst >> 10) & 0x0003) {
+					case 0x0:
+						{
+							cycle++;
+							bool ret;
+							uint16_t addr;
+							switch (inst & 0x000F) {
+								case 0x0:
+									//lds, sts
+									{
+										addr = u->rom[u->pc];
+										u->pc++;
+										if ((inst & 0x0200) == 0x0200) {
+											//st
+											ret = MemWrite(u, addr, d);
+										} else {
+											//ld
+											ret = MemRead(u, addr, &u->sram[rd]);
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+									}
+									break;
+								case 0x1:
+									//ld, st Z+
+									{
+										addr = ((uint16_t)u->sram[REGZ + 1] << 8) | u->sram[REGZ];
+										if ((inst & 0x0200) == 0x0200) {
+											//st
+											ret = MemWrite(u, addr, d);
+										} else {
+											//ld
+											ret = MemRead(u, addr, &u->sram[rd]);
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+										addr++;
+										u->sram[REGZ] = addr & 0xFF;
+										u->sram[REGZ + 1] = addr >> 8;
+									}
+									break;
+								case 0x2:
+									//ld, st -Z
+									{
+										addr = ((uint16_t)u->sram[REGZ + 1] << 8) | u->sram[REGZ];
+										addr--;
+										if ((inst & 0x0200) == 0x0200) {
+											//st
+											ret = MemWrite(u, addr, d);
+										} else {
+											//ld
+											ret = MemRead(u, addr, &u->sram[rd]);
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+										u->sram[REGZ] = addr & 0xFF;
+										u->sram[REGZ + 1] = addr >> 8;
+									}
+									break;
+								case 0x3:
+									//wrong op
+									{
+										cycle = -1;
+									}
+									break;
+								case 0x4:
+									//lpm, xch
+									{
+										addr = ((uint16_t)u->sram[REGZ + 1] << 8) | u->sram[REGZ];
+										if ((inst & 0x0200) == 0x0200) {
+											//xch
+											ret = MemRead(u, addr, &u->sram[rd]);
+											ret = ret && MemWrite(u, addr, d);
+										} else {
+											//lpm
+											cycle++;
+											ret = RomRead(u, addr, &u->sram[rd]);
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+									}
+									break;
+								case 0x5:
+									//lpm Z+, las
+									{
+										addr = ((uint16_t)u->sram[REGZ + 1] << 8) | u->sram[REGZ];
+										if ((inst & 0x0200) == 0x0200) {
+											//las
+											ret = MemRead(u, addr, &u->sram[rd]);
+											ret = ret && MemWrite(u, addr, u->sram[rd] | d);
+										} else {
+											//lpm Z+
+											cycle++;
+											ret = RomRead(u, addr, &u->sram[rd]);
+											addr++;
+											u->sram[REGZ] = addr & 0xFF;
+											u->sram[REGZ + 1] = addr >> 8;
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+									}
+									break;
+								case 0x6:
+									//lac
+									{
+										addr = ((uint16_t)u->sram[REGZ + 1] << 8) | u->sram[REGZ];
+										if ((inst & 0x0200) == 0x0200) {
+											//lac
+											ret = MemRead(u, addr, &u->sram[rd]);
+											ret = ret && MemWrite(u, addr, u->sram[rd] & ~d);
+										} else {
+											//wrong op
+											ret = false;
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+									}
+									break;
+								case 0x7:
+									//lat
+									{
+										addr = ((uint16_t)u->sram[REGZ + 1] << 8) | u->sram[REGZ];
+										if ((inst & 0x0200) == 0x0200) {
+											//lat
+											ret = MemRead(u, addr, &u->sram[rd]);
+											ret = ret && MemWrite(u, addr, u->sram[rd] ^ d);
+										} else {
+											//wrong op
+											ret = false;
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+									}
+									break;
+								case 0x8:
+									//wrong op
+									{
+										cycle = -1;
+									}
+									break;
+								case 0x9:
+									//ld, st Y+
+									{
+										addr = ((uint16_t)u->sram[REGY + 1] << 8) | u->sram[REGY];
+										if ((inst & 0x0200) == 0x0200) {
+											//st
+											ret = MemWrite(u, addr, d);
+										} else {
+											//ld
+											ret = MemRead(u, addr, &u->sram[rd]);
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+										addr++;
+										u->sram[REGY] = addr & 0xFF;
+										u->sram[REGY + 1] = addr >> 8;
+									}
+									break;
+								case 0xA:
+									//ld, st -Y
+									{
+										addr = ((uint16_t)u->sram[REGY + 1] << 8) | u->sram[REGY];
+										addr--;
+										if ((inst & 0x0200) == 0x0200) {
+											//st
+											ret = MemWrite(u, addr, d);
+										} else {
+											//ld
+											ret = MemRead(u, addr, &u->sram[rd]);
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+										u->sram[REGY] = addr & 0xFF;
+										u->sram[REGY + 1] = addr >> 8;
+									}
+									break;
+								case 0xB:
+									//wrong op
+									{
+										cycle = -1;
+									}
+									break;
+								case 0xC:
+									//ld, st X
+									{
+										addr = ((uint16_t)u->sram[REGX + 1] << 8) | u->sram[REGX];
+										if ((inst & 0x0200) == 0x0200) {
+											//st
+											ret = MemWrite(u, addr, d);
+										} else {
+											//ld
+											ret = MemRead(u, addr, &u->sram[rd]);
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+									}
+									break;
+								case 0xD:
+									//ld, st X+
+									{
+										addr = ((uint16_t)u->sram[REGX + 1] << 8) | u->sram[REGX];
+										if ((inst & 0x0200) == 0x0200) {
+											//st
+											ret = MemWrite(u, addr, d);
+										} else {
+											//ld
+											ret = MemRead(u, addr, &u->sram[rd]);
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+										addr++;
+										u->sram[REGX] = addr & 0xFF;
+										u->sram[REGX + 1] = addr >> 8;
+									}
+									break;
+								case 0xE:
+									//ld, st -X
+									{
+										addr = ((uint16_t)u->sram[REGX + 1] << 8) | u->sram[REGX];
+										addr--;
+										if ((inst & 0x0200) == 0x0200) {
+											//st
+											ret = MemWrite(u, addr, d);
+										} else {
+											//ld
+											ret = MemRead(u, addr, &u->sram[rd]);
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+										u->sram[REGX] = addr & 0xFF;
+										u->sram[REGX + 1] = addr >> 8;
+									}
+									break;
+								case 0xF:
+									//pop, push
+									{
+										assert(u->ioread[SPL - 0x20] == NULL);
+										assert(u->ioread[SPH - 0x20] == NULL);
+										assert(u->iowrite[SPL - 0x20] == NULL);
+										assert(u->iowrite[SPH - 0x20] == NULL);
+										uint16_t sp = (u->sram[SPH] << 8) | u->sram[SPL];
+										if ((inst & 0x0200) == 0x0200) {
+											//push
+											ret = MemWrite(u, sp, d);
+											sp--;
+										} else {
+											//pop
+											sp++;
+											ret = MemRead(u, sp, &u->sram[rd]);
+										}
+										if (!ret) {
+											cycle = -1;
+										}
+										//write back sp
+										u->sram[SPL] = sp & 0xFF;
+										u->sram[SPH] = sp >> 8;
+										return ret;
+									}
+									break;
+								default:
+									assert(false);
+							}
+						}
+						break;
+					case 0x1:
+						{
+							//TODO
+						}
+						break;
+					case 0x2:
+						//cbi, sbi, sbic, sbis
+						{
+							uint8_t io = (inst >> 3) & 0x001F;
+							uint8_t addr = io + 0x20;
+							uint8_t bit = inst & 0x0007;
+							uint8_t data;
+							bool ret = MemRead(u, addr, &data);
+							assert(ret);
+							if ((inst & 0x0100) == 0x0000) {
+								//cbi, sbi
+								cycle++;
+								if ((inst & 0x0200) == 0x0200) {
+									//sbi
+									data |= 1 << bit;
+								} else {
+									//cbi
+									data &= ~(1 << bit);
+								}
+								ret = MemWrite(u, addr, data);
+								assert(ret);
+							} else {
+								//sbic, sbis
+								if (((data >> bit) & 1) == ((inst >> 9) & 1)) {
+									uint16_t inst1 = u->rom[u->pc];
+									if (TestInst2Word(inst1)) {
+										cycle++;
+										u->pc++;
+									}
+									cycle++;
+									u->pc++;
+								}
+							}
+						}
+						break;
+					case 0x3:
+						//wrong op
+						{
+							cycle = -1;
+						}
+						break;
+					default:
+						assert(false);
+				}
 			}
 		} else {
 			//ld(d), st(d)
 			cycle++;
-			uint8_t delta;//TODO read
+			uint8_t delta = (inst & 0x07) | ((inst >> 7) & 0x18) | ((inst >> 8) & 0x20);
 			uint16_t addr;
 			if ((inst & 0x0008) == 0x0008) {
 				//use Y
@@ -564,9 +903,12 @@ int avr_runstep(AVRMCU *u) {
 					//brbs, brbc
 					bool clear = ((inst & 0x0400) == 0x0400);//brbc = 1, brbs = 0
 					if (((u->sram[SREG] >> bit) & 1) ^ clear) {//bit set != clear
-						cycle++;
 						//jump
-						uint16_t delta;//TODO read relative value
+						cycle++;
+						int8_t delta = (inst >> 3) & 0x7F;
+						if ((delta & 0x40) == 0x40) {// < 0
+							delta |= 0x80;
+						}
 						u->pc += delta;
 					}
 				}
