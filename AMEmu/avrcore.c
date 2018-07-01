@@ -20,29 +20,77 @@
 #define SREG_T 6
 #define SREG_I 7
 
-#define GETC() (u->reg[SREG] & (1 << SREG_C))
-#define GETZ() (u->reg[SREG] & (1 << SREG_Z))
-#define GETN() (u->reg[SREG] & (1 << SREG_N))
-#define GETV() (u->reg[SREG] & (1 << SREG_V))
-#define GETS() (u->reg[SREG] & (1 << SREG_S))
-#define GETH() (u->reg[SREG] & (1 << SREG_H))
-#define GETT() (u->reg[SREG] & (1 << SREG_T))
-#define GETI() (u->reg[SREG] & (1 << SREG_I))
+#define GETC() (u->sram[SREG] & (1 << SREG_C))
+#define GETZ() (u->sram[SREG] & (1 << SREG_Z))
+#define GETN() (u->sram[SREG] & (1 << SREG_N))
+#define GETV() (u->sram[SREG] & (1 << SREG_V))
+#define GETS() (u->sram[SREG] & (1 << SREG_S))
+#define GETH() (u->sram[SREG] & (1 << SREG_H))
+#define GETT() (u->sram[SREG] & (1 << SREG_T))
+#define GETI() (u->sram[SREG] & (1 << SREG_I))
 
-#define SETC(x) (u->reg[SREG] = (u->reg[SREG] & ~(1 << SREG_C)) | ((x) ? 1 << SREG_C : 0))
-#define SETZ(x) (u->reg[SREG] = (u->reg[SREG] & ~(1 << SREG_Z)) | ((x) ? 1 << SREG_Z : 0))
-#define SETN(x) (u->reg[SREG] = (u->reg[SREG] & ~(1 << SREG_N)) | ((x) ? 1 << SREG_N : 0))
-#define SETV(x) (u->reg[SREG] = (u->reg[SREG] & ~(1 << SREG_V)) | ((x) ? 1 << SREG_V : 0))
-#define SETS(x) (u->reg[SREG] = (u->reg[SREG] & ~(1 << SREG_S)) | ((x) ? 1 << SREG_S : 0))
-#define SETH(x) (u->reg[SREG] = (u->reg[SREG] & ~(1 << SREG_H)) | ((x) ? 1 << SREG_H : 0))
-#define SETT(x) (u->reg[SREG] = (u->reg[SREG] & ~(1 << SREG_T)) | ((x) ? 1 << SREG_T : 0))
-#define SETI(x) (u->reg[SREG] = (u->reg[SREG] & ~(1 << SREG_I)) | ((x) ? 1 << SREG_I : 0))
+#define SETC(x) (u->sram[SREG] = (u->sram[SREG] & ~(1 << SREG_C)) | ((x) ? 1 << SREG_C : 0))
+#define SETZ(x) (u->sram[SREG] = (u->sram[SREG] & ~(1 << SREG_Z)) | ((x) ? 1 << SREG_Z : 0))
+#define SETN(x) (u->sram[SREG] = (u->sram[SREG] & ~(1 << SREG_N)) | ((x) ? 1 << SREG_N : 0))
+#define SETV(x) (u->sram[SREG] = (u->sram[SREG] & ~(1 << SREG_V)) | ((x) ? 1 << SREG_V : 0))
+#define SETS(x) (u->sram[SREG] = (u->sram[SREG] & ~(1 << SREG_S)) | ((x) ? 1 << SREG_S : 0))
+#define SETH(x) (u->sram[SREG] = (u->sram[SREG] & ~(1 << SREG_H)) | ((x) ? 1 << SREG_H : 0))
+#define SETT(x) (u->sram[SREG] = (u->sram[SREG] & ~(1 << SREG_T)) | ((x) ? 1 << SREG_T : 0))
+#define SETI(x) (u->sram[SREG] = (u->sram[SREG] & ~(1 << SREG_I)) | ((x) ? 1 << SREG_I : 0))
 
 #pragma endregion
+#define SPL 0x5D
+#define SPH 0x5E
+
+#define REGX 0x1A
+#define REGY 0x1C
+#define REGZ 0x1E
 
 #define LOW(data) ((data) & 0xFF)
 #define HIGH(data) (((data) >> 8) & 0xFF)
 
+
+#define CheckSRAMAddr(addr) ((uint16_t)(addr) <= 0xAFF)
+
+inline static bool MemWrite(AVRMCU *u, uint16_t addr, uint8_t data) {
+	if (addr >= 0x20 && addr <= 0xFF) {
+		//IO
+		//TODO IO callback
+	} else {
+		//direct
+		if (!CheckSRAMAddr(addr)) {
+			return false;
+		}
+		u->sram[addr] = data;
+	}
+	return true;
+}
+
+inline static bool MemRead(AVRMCU *u, uint16_t addr, uint8_t *data) {
+	if (addr >= 0x20 && addr <= 0xFF) {
+		//IO
+		//TODO IO callback
+	} else {
+		//direct
+		if (!CheckSRAMAddr(addr)) {
+			return false;
+		}
+		*data = u->sram[addr];
+	}
+	return true;
+}
+
+inline static bool PushPC(AVRMCU *u) {
+	uint16_t sp = (u->sram[SPH] << 8) | u->sram[SPL];
+	//WARNING: Wrong operation when SP -> SP
+	//push
+	bool ret = MemWrite(u, sp--, u->pc & 0xFF);
+	ret = ret && MemWrite(u, sp--, u->pc >> 8);
+	//write back sp
+	u->sram[SPL] = sp & 0xFF;
+	u->sram[SPH] = sp >> 8;
+	return ret;
+}
 
 int avr_runstep(AVRMCU *u) {
 	int cycle = 1;
@@ -51,7 +99,6 @@ int avr_runstep(AVRMCU *u) {
 	//process operation
 	if (inst == 0) {
 		//nop
-		//break;
 	} else if ((inst & 0xFC00) == 0x0000) {
 		if ((inst & 0x0300) == 0x0300) {
 			//mulsu, fmul, fmuls, fmulsu
@@ -63,51 +110,51 @@ int avr_runstep(AVRMCU *u) {
 				if ((inst & 0x0008) == 0x0000) {
 					//mulsu
 					{
-						int8_t d = (int8_t)u->reg[rd];
-						uint8_t r = u->reg[rr];
+						int8_t d = (int8_t)u->sram[rd];
+						uint8_t r = u->sram[rr];
 						int32_t o = d * r;
 						SETZ(o == 0);
 						SETC(o & (1 << 15));
-						u->reg[0] = LOW(o);
-						u->reg[1] = HIGH(o);
+						u->sram[0] = LOW(o);
+						u->sram[1] = HIGH(o);
 					}
 				} else {
 					//fmul
 					{
-						uint8_t d = u->reg[rd];
-						uint8_t r = u->reg[rr];
+						uint8_t d = u->sram[rd];
+						uint8_t r = u->sram[rr];
 						uint32_t o = d * r;
 						SETZ(o == 0);
 						SETC(o & (1 << 15));
 						o <<= 1;
-						u->reg[0] = LOW(o);
-						u->reg[1] = HIGH(o);
+						u->sram[0] = LOW(o);
+						u->sram[1] = HIGH(o);
 					}
 				}
 			} else {
 				if ((inst & 0x0008) == 0x0000) {
 					//fmuls
 					{
-						int8_t d = (int8_t)u->reg[rd];
-						int8_t r = (int8_t)u->reg[rr];
+						int8_t d = (int8_t)u->sram[rd];
+						int8_t r = (int8_t)u->sram[rr];
 						int32_t o = d * r;
 						SETZ(o == 0);
 						SETC(o & (1 << 15));
 						o <<= 1;
-						u->reg[0] = LOW(o);
-						u->reg[1] = HIGH(o);
+						u->sram[0] = LOW(o);
+						u->sram[1] = HIGH(o);
 					}
 				} else {
 					//fmulsu
 					{
-						int8_t d = (int8_t)u->reg[rd];
-						uint8_t r = u->reg[rr];
+						int8_t d = (int8_t)u->sram[rd];
+						uint8_t r = u->sram[rr];
 						int32_t o = d * r;
 						SETZ(o == 0);
 						SETC(o & (1 << 15));
 						o <<= 1;
-						u->reg[0] = LOW(o);
-						u->reg[1] = HIGH(o);
+						u->sram[0] = LOW(o);
+						u->sram[1] = HIGH(o);
 					}
 				}
 			}
@@ -117,8 +164,8 @@ int avr_runstep(AVRMCU *u) {
 				uint8_t rd, rr;
 				rd = (inst & 0x00F0) >> 3;
 				rr = (inst & 0x000F) << 1;
-				u->reg[rd] = u->reg[rr];
-				u->reg[rd + 1] = u->reg[rr + 1];
+				u->sram[rd] = u->sram[rr];
+				u->sram[rd + 1] = u->sram[rr + 1];
 			}
 		} else if ((inst & 0x0300) == 0x0200) {
 			//muls
@@ -127,13 +174,13 @@ int avr_runstep(AVRMCU *u) {
 				rd = ((inst & 0x00F0) >> 4) | 0x10;
 				rr = (inst & 0x000F) | 0x10;
 
-				int8_t d = (int8_t)u->reg[rd];
-				int8_t r = (int8_t)u->reg[rr];
+				int8_t d = (int8_t)u->sram[rd];
+				int8_t r = (int8_t)u->sram[rr];
 				int32_t o = d * r;
 				SETZ(o == 0);
 				SETC(o & (1 << 15));
-				u->reg[0] = LOW(o);
-				u->reg[1] = HIGH(o);
+				u->sram[0] = LOW(o);
+				u->sram[1] = HIGH(o);
 			}
 		} else {
 			//wrong op
@@ -144,8 +191,8 @@ int avr_runstep(AVRMCU *u) {
 		rd = (inst >> 4) & 0x1F;
 		rr = (inst & 0x000F) | ((inst >> 5) & 0x0010);
 		uint8_t d, r;
-		d = u->reg[rd];
-		r = u->reg[rr];
+		d = u->sram[rd];
+		r = u->sram[rr];
 		if ((inst & 0x8000) == 0x0000) {
 			switch (inst >> 10) {
 				case 0x01:
@@ -177,7 +224,7 @@ int avr_runstep(AVRMCU *u) {
 						SETV(vtest & (1 << 7));
 						SETS((o ^ vtest) & (1 << 7));
 						SETH(ctest & (1 << 3));
-						u->reg[rd] = o;
+						u->sram[rd] = o;
 					}
 					break;
 				case 0x03:
@@ -193,7 +240,7 @@ int avr_runstep(AVRMCU *u) {
 						SETV(vtest & (1 << 7));
 						SETS((o ^ vtest) & (1 << 7));
 						SETH(ctest & (1 << 3));
-						u->reg[rd] = o;
+						u->sram[rd] = o;
 					}
 					break;
 				case 0x04:
@@ -240,7 +287,7 @@ int avr_runstep(AVRMCU *u) {
 						SETV(vtest & (1 << 7));
 						SETS((o ^ vtest) & (1 << 7));
 						SETH(ctest & (1 << 3));
-						u->reg[rd] = o;
+						u->sram[rd] = o;
 					}
 					break;
 				case 0x07:
@@ -256,7 +303,7 @@ int avr_runstep(AVRMCU *u) {
 						SETV(vtest & (1 << 7));
 						SETS((o ^ vtest) & (1 << 7));
 						SETH(ctest & (1 << 3));
-						u->reg[rd] = o;
+						u->sram[rd] = o;
 					}
 					break;
 				case 0x08:
@@ -267,7 +314,7 @@ int avr_runstep(AVRMCU *u) {
 						SETN(o & (1 << 7));
 						SETV(0);
 						SETS(GETN() ^ 0);
-						u->reg[rd] = o;
+						u->sram[rd] = o;
 					}
 					break;
 				case 0x09:
@@ -278,7 +325,7 @@ int avr_runstep(AVRMCU *u) {
 						SETN(o & (1 << 7));
 						SETV(0);
 						SETS(GETN() ^ 0);
-						u->reg[rd] = o;
+						u->sram[rd] = o;
 					}
 					break;
 				case 0x0A:
@@ -289,13 +336,13 @@ int avr_runstep(AVRMCU *u) {
 						SETN(o & (1 << 7));
 						SETV(0);
 						SETS(GETN() ^ 0);
-						u->reg[rd] = o;
+						u->sram[rd] = o;
 					}
 					break;
 				case 0x0B:
 					//mov
 					{
-						u->reg[rd] = r;
+						u->sram[rd] = r;
 					}
 					break;
 				default:
@@ -307,139 +354,231 @@ int avr_runstep(AVRMCU *u) {
 				uint32_t o = d * r;
 				SETZ(o == 0);
 				SETC(o & (1 << 15));
-				u->reg[0] = LOW(o);
-				u->reg[1] = HIGH(o);
+				u->sram[0] = LOW(o);
+				u->sram[1] = HIGH(o);
 			}
 		}
 	} else if (((inst & 0x8000) == 0x0000) || ((inst & 0xF000) == 0xE000)) {
-		//TODO
-		uint8_t rd, k;
+		uint8_t rd;
 		rd = ((inst >> 4) & 0x0F) | 0x10;
-		k = (inst & 0x0F) | ((inst >> 4) & 0xF0);
+		uint8_t d, r;
+		d = u->sram[rd];
+		r = (inst & 0x0F) | ((inst >> 4) & 0xF0);
 		switch (inst >> 12) {
 			case 0x3:
 				//cpi
+				{
+					uint8_t o, ctest, vtest;
+					o = d - r;
+					ctest = (~d & r) | (r & o) | (o & ~d);
+					vtest = (d & ~r & ~o) | (~d & r & o);
+					SETC(ctest & (1 << 7));
+					SETZ(o == 0);
+					SETN(o & (1 << 7));
+					SETV(vtest & (1 << 7));
+					SETS((o ^ vtest) & (1 << 7));
+					SETH(ctest & (1 << 3));
+				}
 				break;
 			case 0x4:
 				//sbci
+				{
+					uint8_t o, ctest, vtest;
+					o = d - r - (GETC() ? 1 : 0);
+					ctest = (~d & r) | (r & o) | (o & ~d);
+					vtest = (d & ~r & ~o) | (~d & r & o);
+					SETC(ctest & (1 << 7));
+					if (o != 0) SETZ(0);
+					SETN(o & (1 << 7));
+					SETV(vtest & (1 << 7));
+					SETS((o ^ vtest) & (1 << 7));
+					SETH(ctest & (1 << 3));
+					u->sram[rd] = o;
+				}
 				break;
 			case 0x5:
 				//subi
+				{
+					uint8_t o, ctest, vtest;
+					o = d - r;
+					ctest = (~d & r) | (r & o) | (o & ~d);
+					vtest = (d & ~r & ~o) | (~d & r & o);
+					SETC(ctest & (1 << 7));
+					SETZ(o == 0);
+					SETN(o & (1 << 7));
+					SETV(vtest & (1 << 7));
+					SETS((o ^ vtest) & (1 << 7));
+					SETH(ctest & (1 << 3));
+					u->sram[rd] = o;
+				}
 				break;
 			case 0x6:
 				//ori
+				{
+					uint8_t o = d | r;
+					SETZ(o == 0);
+					SETN(o & (1 << 7));
+					SETV(0);
+					SETS(GETN() ^ 0);
+					u->sram[rd] = o;
+				}
 				break;
 			case 0x7:
 				//andi
+				{
+					uint8_t o = d & r;
+					SETZ(o == 0);
+					SETN(o & (1 << 7));
+					SETV(0);
+					SETS(GETN() ^ 0);
+					u->sram[rd] = o;
+				}
 				break;
 			case 0xE:
 				//ldi
+				{
+					u->sram[rd] = r;
+				}
 				break;
 			default:
 				assert(false);
 		}
-	} else if (0) {
-
-	}
-	return cycle;
-}
-
-int8_t avr_runstep_1(AVRMCU *u) {
-	int8_t cycle = 1;
-	uint16_t inst = u->rom[u->pc];
-	switch (inst >> 12) {
-	case 0b0000:
-		if (inst == 0) {
-			//nop
-			break;
-		}
-		if ((inst & 0x0C00) == 0) {
-
-		} else {
-
-		}
-
-		break;
-	case 0b0001:
-		//cpse, cp, sub, adc
-		break;
-	case 0b0010:
-		//and, xor, or, mov
-		break;
-
-
-
-	case 0b0011:
-		//cpi
-	case 0b0100:
-		//sbci
-	case 0b0101:
-		//subi
-	case 0b0110:
-		//ori
-	case 0b0111:
-		//andi
-	case 0b1110:
-		//ldi(OK)
-		{
-			uint8_t reg = 0x10 | ((inst >> 4) & 0x0F);
-			uint8_t data = ((inst >> 4) & 0xF0) | (inst & 0x0F);
-			switch (inst >> 12) {
-			case 0b0011:
-				//cpi
-				break;
-			case 0b0100:
-				//sbci
-				break;
-			case 0b0101:
-				//subi
-				break;
-			case 0b0110:
-				//ori
-				break;
-			case 0b0111:
-				//andi
-				break;
-			case 0b1110:
-				//ldi
-				u->reg[reg] = data;
-				break;
-			default:
-				assert(false);
-			}
-		}
-		break;
-	case 0b1000:
-		break;
-	case 0b1001:
-		break;
-	case 0b1010:
-		break;
-	case 0b1011:
-		//in, out(OK)
-		{
-			uint8_t reg = (inst >> 4) & 0x1F;
-			uint8_t io = (((inst >> 5) & 0x30) | (inst & 0x0F)) + 0x20;
-			if (inst & 0x0800) {
-				//out
-				u->reg[io] = u->reg[reg];
+	} else if ((inst & 0xC000) == 0x8000) {
+		//10xx xxxx xxxx xxxx
+		uint8_t rd = (inst >> 4) & 0x1F;
+		uint8_t d = u->sram[rd];
+		if ((inst & 0x1000) == 0x1000) {
+			if ((inst & 0x2000) == 0x2000) {
+				//in, out
+				uint8_t io = (inst & 0x000F) | ((inst >> 5) & 0x0030);
+				uint8_t addr = io + 0x20;
+				bool ret;
+				if ((inst & 0x0800) == 0x0800) {
+					//out
+					ret = MemWrite(u, addr, d);
+				} else {
+					//in
+					ret = MemRead(u, addr, &u->sram[rd]);
+				}
+				assert(ret);
 			} else {
-				//in
-				u->reg[reg] = u->reg[io];
+				//1001 xxxx xxxx xxxx
+				//TODO
+			}
+		} else {
+			//ld(d), st(d)
+			cycle++;
+			uint8_t delta;//TODO read
+			uint16_t addr;
+			if ((inst & 0x0008) == 0x0008) {
+				//use Y
+				addr = ((uint16_t)u->sram[REGY + 1] << 8) | u->sram[REGY];
+			} else {
+				//use Z
+				addr = ((uint16_t)u->sram[REGZ + 1] << 8) | u->sram[REGZ];
+			}
+			addr += delta;
+			bool ret;
+			if ((inst & 0x0200) == 0x0200) {
+				//st
+				ret = MemWrite(u, addr, d);
+			} else {
+				//ld
+				ret = MemRead(u, addr, &u->sram[rd]);
+			}
+			if (!ret) {
+				cycle = -1;
 			}
 		}
-		break;
-	case 0b1100:
-		//rjmp
-		break;
-	case 0b1101:
-		//rcall
-		break;
-	case 0b1111:
-		break;
-
+	} else if ((inst & 0xC000) == 0xC000) {
+		//11xx xxxx xxxx xxxx
+		if ((inst & 0xE000) == 0xC000) {
+			//rjmp, rcall
+			cycle++;//2 for rjmp
+			int16_t delta = inst & 0x0FFF;
+			if ((delta & 0x0800) == 0x0800) {// < 0
+				delta |= 0xF000;
+			}
+			if ((inst & 0x1000) == 0x1000) {
+				cycle++;//3 for rcall
+				if (!PushPC(u)) {
+					//SP Out of range error
+					cycle = -1;
+				}
+			}
+			u->pc += delta;
+		} else {
+			//111x xxxx xxxx xxxx
+			if ((inst & 0x1000) == 0x1000) {
+				//1111 xxxx xxxx xxxx
+				uint8_t bit = inst & 0x07;
+				if ((inst & 0x0800) == 0x0800) {
+					uint8_t rd = (inst >> 4) & 0x1F;
+					uint8_t d = u->sram[rd];
+					if ((inst & 0x0008) == 0x0000) {
+						switch ((inst >> 9) & 0x03) {
+							case 0x00:
+								//bld
+								u->sram[rd] = (rd & ~(1 << bit)) | (GETT() ? 1 << bit : 0);
+								break;
+							case 0x01:
+								//bst
+								SETT(rd & (1 << bit));
+								break;
+							case 0x02:
+								//sbrc
+								{
+									if (!(d & (1 << bit))) {
+										uint16_t inst1 = u->rom[u->pc];
+										if (TestInst2Word(inst1)) {
+											cycle++;
+											u->pc++;
+										}
+										cycle++;
+										u->pc++;
+									}
+								}
+								break;
+							case 0x03:
+								//sbrs
+								{
+									if (d & (1 << bit)) {
+										uint16_t inst1 = u->rom[u->pc];
+										if (TestInst2Word(inst1)) {
+											cycle++;
+											u->pc++;
+										}
+										cycle++;
+										u->pc++;
+									}
+								}
+								break;
+							default:
+								assert(false);
+						}
+					} else {
+						//wrong op
+						cycle = -1;
+					}
+				} else {
+					//brbs, brbc
+					bool clear = ((inst & 0x0400) == 0x0400);//brbc = 1, brbs = 0
+					if (((u->sram[SREG] >> bit) & 1) ^ clear) {//bit set != clear
+						cycle++;
+						//jump
+						uint16_t delta;//TODO read relative value
+						u->pc += delta;
+					}
+				}
+			} else {
+				//wrong op
+				cycle = -1;
+			}
+		}
+	} else {
+		//wrong op
+		cycle = -1;
 	}
-	u->pc++;
+	//TODO test PC wraparound?
 	return cycle;
 }
-
