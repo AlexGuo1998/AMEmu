@@ -7,6 +7,10 @@ void DebugPrint(const char *str) {
 	fputs(str, stderr);
 }
 
+#define IOInitDefault NULL
+
+#define IOInitReserved NULL
+
 void IOWriteDefault(AVRMCU *u, uint8_t addr, uint8_t data) {
 	char buffer[128];
 	snprintf(buffer, 128, "IO Port 0x%02hhX(mem 0x%02hhX) not implemented for write!\n", addr - 0x20, addr);
@@ -29,6 +33,247 @@ void IOWriteReserved(AVRMCU *u, uint8_t addr, uint8_t data) {
 uint8_t IOReadReserved(AVRMCU *u, uint8_t addr) {
 	return 0;
 }
+
+const IOInitCallback IOInitCallbackDefault[0x100 - 0x20] = {
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitDefault, //PINB
+	IOInitDefault, //DDRB
+	IOInitDefault, //PORTB
+	IOInitDefault, //PINC
+	IOInitDefault, //DDRC
+	IOInitDefault, //PORTC
+	IOInitDefault, //PIND
+	IOInitDefault, //DDRD
+	IOInitDefault, //PORTD
+	IOInitDefault, //PINE
+	IOInitDefault, //DDRE
+	IOInitDefault, //PORTE
+	IOInitDefault, //PINF
+
+	IOInitDefault, //DDRF
+	IOInitDefault, //PORTF
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitDefault, //TIFR0
+	IOInitDefault, //TIFR1
+	IOInitReserved,
+	IOInitDefault, //TIFR3
+	IOInitDefault, //TIFR4
+	IOInitReserved,
+	IOInitDefault, //PCIFR
+	IOInitDefault, //EIFR
+	IOInitDefault, //EIMSK
+	NULL, //GPIOR0
+	IOInitDefault, //EECR
+
+	IOInitDefault, //EEDR
+	IOInitDefault, //EEARL
+	IOInitDefault, //EEARH
+	IOInitDefault, //GTCCR
+	IOInitDefault, //TCCR0A
+	IOInitDefault, //TCCR0B
+	IOInitDefault, //TCNT0
+	IOInitDefault, //OCR0A
+	IOInitDefault, //OCR0B
+	IOInitDefault, //PLLCSR
+	NULL, //GPIOR1
+	NULL, //GPIOR2
+	IOInitDefault, //SPCR
+	IOInitDefault, //SPSR
+	IOInitDefault, //SPDR
+	IOInitReserved,
+
+	IOInitDefault, //ACSR
+	IOInitDefault, //OCDR/MONDR
+	IOInitDefault, //PLLFRQ
+	IOInitDefault, //SMCR
+	IOInitDefault, //MCUSR
+	IOInitDefault, //MCUCR
+	IOInitReserved,
+	IOInitDefault, //SPMCSR
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitDefault, //RAMPZ
+	IOInitReserved,
+	NULL, //SPL
+	NULL, //SPH
+	NULL, //SREG
+
+	//memory addressing only
+	IOInitDefault, //WDTCSR
+	IOInitDefault, //CLKPR
+	IOInitReserved,
+	IOInitReserved,
+	IOInitDefault, //PRR0
+	IOInitDefault, //PRR1
+	IOInitDefault, //OSCCAL
+	IOInitDefault, //RCCTRL
+	IOInitDefault, //PCICR
+	IOInitDefault, //EICRA
+	IOInitDefault, //EICRB
+	IOInitDefault, //PCMSK0
+	IOInitReserved,
+	IOInitReserved,
+	IOInitDefault, //TIMSK0
+	IOInitDefault, //TIMSK1
+
+	IOInitReserved,
+	IOInitDefault, //TIMSK3
+	IOInitDefault, //TIMSK4
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitDefault, //ADCL
+	IOInitDefault, //ADCH
+	IOInitDefault, //ADCSRA
+	IOInitDefault, //ADCSRB
+	IOInitDefault, //ADMUX
+	IOInitDefault, //DIDR2
+	IOInitDefault, //DIDR0
+	IOInitDefault, //DIDR1
+
+	IOInitDefault, //TCCR1A
+	IOInitDefault, //TCCR1B
+	IOInitDefault, //TCCR1C
+	IOInitReserved,
+	IOInitDefault, //TCNT1L
+	IOInitDefault, //TCNT1H
+	IOInitDefault, //ICR1L
+	IOInitDefault, //ICR1H
+	IOInitDefault, //OCR1AL
+	IOInitDefault, //OCR1AH
+	IOInitDefault, //OCR1BL
+	IOInitDefault, //OCR1BH
+	IOInitDefault, //OCR1CL
+	IOInitDefault, //OCR1CH
+	IOInitReserved,
+	IOInitReserved,
+
+	IOInitDefault, //TCCR3A
+	IOInitDefault, //TCCR3B
+	IOInitDefault, //TCCR3C
+	IOInitReserved,
+	IOInitDefault, //TCNT3L
+	IOInitDefault, //TCNT3H
+	IOInitDefault, //ICR3L
+	IOInitDefault, //ICR3H
+	IOInitDefault, //OCR3AL
+	IOInitDefault, //OCR3AH
+	IOInitDefault, //OCR3BL
+	IOInitDefault, //OCR3BH
+	IOInitDefault, //OCR3CL
+	IOInitDefault, //OCR3CH
+	IOInitReserved,
+	IOInitReserved,
+
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitDefault, //TWBR
+	IOInitDefault, //TWSR
+	IOInitDefault, //TWAR
+	IOInitDefault, //TWDR
+	IOInitDefault, //TWCR
+	IOInitDefault, //TWAMR
+	IOInitDefault, //TCNT4
+	IOInitDefault, //TC4H
+
+	IOInitDefault, //TCCR4A
+	IOInitDefault, //TCCR4B
+	IOInitDefault, //TCCR4C
+	IOInitDefault, //TCCR4D
+	IOInitDefault, //TCCR4E
+	IOInitDefault, //CLKSEL0
+	IOInitDefault, //CLKSEL1
+	IOInitDefault, //CLKSTA
+	IOInitDefault, //UCSR1A
+	IOInitDefault, //UCSR1B
+	IOInitDefault, //UCSR1C
+	IOInitDefault, //UCSR1D
+	IOInitDefault, //UBRR1L
+	IOInitDefault, //UBRR1H
+	IOInitDefault, //UDR1
+	IOInitDefault, //OCR4A
+
+	IOInitDefault, //OCR4B
+	IOInitDefault, //OCR4C
+	IOInitDefault, //OCR4D
+	IOInitReserved,
+	IOInitDefault, //DT4
+	IOInitReserved,
+	IOInitReserved,
+	IOInitDefault, //UHWCON
+	IOInitDefault, //USBCON
+	IOInitDefault, //USBSTA
+	IOInitDefault, //USBINT
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+
+	IOInitDefault, //UDCON
+	IOInitDefault, //UDINT
+	IOInitDefault, //UDIEN
+	IOInitDefault, //UDADDR
+	IOInitDefault, //UDFNUML
+	IOInitDefault, //UDFNUMH
+	IOInitDefault, //UDMFN
+	IOInitReserved,
+	IOInitDefault, //UEINTX
+	IOInitDefault, //UENUM
+	IOInitDefault, //UERST
+	IOInitDefault, //UECONX
+	IOInitDefault, //UECFG0X
+	IOInitDefault, //UECFG1X
+	IOInitDefault, //UESTA0X
+	IOInitDefault, //UESTA1X
+
+	IOInitDefault, //UEIENX
+	IOInitDefault, //UEDATA
+	IOInitDefault, //UEBCLX
+	IOInitDefault, //UEBCHX
+	IOInitDefault, //UEINT
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+	IOInitReserved,
+};
 
 const IOWriteCallback IOWriteCallbackDefault[0x100 - 0x20] = {
 	IOWriteReserved,

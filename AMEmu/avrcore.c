@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdbool.h>
+#include <string.h> //for memset
 
 #define TestInst2Word(inst) (\
 	(((inst) & 0b1111111000001100) == 0b1001010000001100)/*jmp, call*/ || \
@@ -103,6 +104,26 @@ inline static bool PushPC(AVRMCU *u) {
 	u->sram[SPL] = sp & 0xFF;
 	u->sram[SPH] = sp >> 8;
 	return ret;
+}
+
+void avr_init(AVRMCU *u, bool clearram, bool resetio) {
+	u->pc = 0;
+	if (resetio) {
+		for (uint8_t i = 0; i < 0x100 - 0x20; i++) {
+			if (u->ioinit[i]) {
+				u->ioinit[i](u, i + 0x20);
+			} else {
+				u->sram[i + 0x20] = 0;
+			}
+		}
+		//spl, sph
+		u->sram[SPL] = 0xFF;
+		u->sram[SPH] = 0x21;
+	}
+	if (clearram) {
+		memset(&u->sram[0x100], 0, 2560);
+	}
+	//TODO other stuff (timer, etc...)
 }
 
 int avr_runstep(AVRMCU *u) {
@@ -991,7 +1012,7 @@ int avr_runstep(AVRMCU *u) {
 										//jmp
 										{
 											cycle += 2;//3
-											if (inst & 0x01F1 != 0x0000) {
+											if ((inst & 0x01F1) != 0x0000) {
 												//pc out of range
 												cycle = -1;
 											}
@@ -1004,7 +1025,7 @@ int avr_runstep(AVRMCU *u) {
 										//call
 										{
 											cycle += 3;//4
-											if (inst & 0x01F1 != 0x0000) {
+											if ((inst & 0x01F1) != 0x0000) {
 												//pc out of range
 												cycle = -1;
 											}
