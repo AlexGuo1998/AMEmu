@@ -5,22 +5,30 @@ Under constuction. Please be patient...
 ## TODO List
 
 - [ ] MCU emulation
-  - [ ] Normal instructions **<- Working On**
+  - [x] Normal instructions
+    - [ ] **Need test!**  
+    - _Not implemented:_
+    - [ ] Sleep
+    - [ ] Break (for debugging)
+    - [ ] Watchdog timer reset
+    - [ ] Store program memory (ISP)
+  - [ ] I/O ports
   - [ ] Interrupts
   - [ ] Timer
   - [ ] SPI
-  - [ ] UART(For multiplayer)(?)
-  - [ ] TWI/I2C(For multiplayer)(?)
-  - [ ] USB(??)
+  - [ ] Watchdog timer (?)
+  - [ ] UART (For multiplayer) (?)
+  - [ ] TWI/I2C (For multiplayer) (?)
+  - [ ] USB (??)
   - [ ] ISP
 
 - [ ] Screen emulation
   - [ ] SSD1306 OLED controller
-  - [ ] GUI(with `SDL`)
+  - [ ] GUI (with `SDL`)
 
 - [ ] SD Card emulation
   - [ ] From image files
-  - [ ] From folder(live)(?)
+  - [ ] From folder (live) (?)
 
 - [ ] Other peripherals
   - [ ] Keypad
@@ -28,9 +36,9 @@ Under constuction. Please be patient...
   - [ ] RGB LED
 
 - [ ] Others
-  - [ ] PS-2 keyboard / mouse module(?)
-  - [ ] Wi-Fi module(??)
-  - [ ] Bluetooth module(??)
+  - [ ] PS-2 keyboard / mouse module (?)
+  - [ ] Wi-Fi module (??)
+  - [ ] Bluetooth module (??)
 
 * (?) - May be implemented much later
 * (??) - May never be implemented
