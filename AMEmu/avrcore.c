@@ -966,6 +966,15 @@ int avr_runstep(AVRMCU *u) {
 												} else {
 													//bset
 													u->sram[SREG] |= (1 << bit);
+													if (bit == SREG_I) {
+														//sei, run one more step
+														int cycle1 = avr_runstep(u);
+														if (cycle1 < 0) {
+															cycle = cycle1;
+														} else {
+															cycle += cycle1;
+														}
+													}
 												}
 											}
 										}
