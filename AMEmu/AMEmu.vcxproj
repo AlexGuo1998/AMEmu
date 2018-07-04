@@ -69,7 +69,22 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>$(SolutionDir)sdl-vc\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)sdl-vc\lib\$(PlatformTarget);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>$(SolutionDir)sdl-vc\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)sdl-vc\lib\$(PlatformTarget);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(SolutionDir)sdl-vc\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)sdl-vc\lib\$(PlatformTarget);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(SolutionDir)sdl-vc\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)sdl-vc\lib\$(PlatformTarget);$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -77,6 +92,14 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <CustomBuildStep>
+      <Command>COPY "$(SolutionDir)sdl-vc\lib\$(PlatformTarget)\SDL2.dll" "$(TargetDir)"</Command>
+      <Inputs>$(SolutionDir)sdl-vc\lib\$(PlatformTarget)\SDL2.dll</Inputs>
+      <Outputs>$(TargetDir)\SDL2.dll</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -85,6 +108,14 @@
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
+    <Link>
+      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <CustomBuildStep>
+      <Command>COPY "$(SolutionDir)sdl-vc\lib\$(PlatformTarget)\SDL2.dll" "$(TargetDir)"</Command>
+      <Inputs>$(SolutionDir)sdl-vc\lib\$(PlatformTarget)\SDL2.dll</Inputs>
+      <Outputs>$(TargetDir)\SDL2.dll</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -98,7 +129,13 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Command>COPY "$(SolutionDir)sdl-vc\lib\$(PlatformTarget)\SDL2.dll" "$(TargetDir)"</Command>
+      <Inputs>$(SolutionDir)sdl-vc\lib\$(PlatformTarget)\SDL2.dll</Inputs>
+      <Outputs>$(TargetDir)\SDL2.dll</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -112,7 +149,13 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CustomBuildStep>
+      <Command>COPY "$(SolutionDir)sdl-vc\lib\$(PlatformTarget)\SDL2.dll" "$(TargetDir)"</Command>
+      <Inputs>$(SolutionDir)sdl-vc\lib\$(PlatformTarget)\SDL2.dll</Inputs>
+      <Outputs>$(TargetDir)\SDL2.dll</Outputs>
+    </CustomBuildStep>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="avrcore.c" />
