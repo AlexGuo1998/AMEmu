@@ -15,7 +15,7 @@ Under constuction. Please be patient...
   - [ ] I/O ports
   - [ ] Interrupts
   - [ ] Timer
-  - [ ] SPI
+  - [ ] SPI **<- Working On**
   - [ ] Watchdog timer (?)
   - [ ] UART (For multiplayer) (?)
   - [ ] TWI/I2C (For multiplayer) (?)
@@ -23,8 +23,9 @@ Under constuction. Please be patient...
   - [ ] ISP
 
 - [ ] Screen emulation
-  - [ ] SSD1306 OLED controller
-  - [ ] GUI (with `SDL`)
+  - [ ] SSD1306 OLED controller **<- Working On**
+  - [x] GUI (with `SDL`)
+  - [ ] Integrate with core
 
 - [ ] SD Card emulation
   - [ ] From image files

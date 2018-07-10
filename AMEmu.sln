@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.27428.2005
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AMEmu", "AMEmu\AMEmu.vcxproj", "{D3C8ACD5-80B9-4875-9459-314FE1BBF188}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ssd1306", "ssd1306\ssd1306.vcxproj", "{67C6E12E-1567-4A5F-8F17-48CE407636CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{D3C8ACD5-80B9-4875-9459-314FE1BBF188}.Release|x64.Build.0 = Release|x64
 		{D3C8ACD5-80B9-4875-9459-314FE1BBF188}.Release|x86.ActiveCfg = Release|Win32
 		{D3C8ACD5-80B9-4875-9459-314FE1BBF188}.Release|x86.Build.0 = Release|Win32
+		{67C6E12E-1567-4A5F-8F17-48CE407636CE}.Debug|x64.ActiveCfg = Debug|x64
+		{67C6E12E-1567-4A5F-8F17-48CE407636CE}.Debug|x64.Build.0 = Debug|x64
+		{67C6E12E-1567-4A5F-8F17-48CE407636CE}.Debug|x86.ActiveCfg = Debug|Win32
+		{67C6E12E-1567-4A5F-8F17-48CE407636CE}.Debug|x86.Build.0 = Debug|Win32
+		{67C6E12E-1567-4A5F-8F17-48CE407636CE}.Release|x64.ActiveCfg = Release|x64
+		{67C6E12E-1567-4A5F-8F17-48CE407636CE}.Release|x64.Build.0 = Release|x64
+		{67C6E12E-1567-4A5F-8F17-48CE407636CE}.Release|x86.ActiveCfg = Release|Win32
+		{67C6E12E-1567-4A5F-8F17-48CE407636CE}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
