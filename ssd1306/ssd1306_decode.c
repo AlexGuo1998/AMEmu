@@ -28,17 +28,16 @@
 
 
 #define CMDERR_INVALID_COMMAND									1
-#define CMDERR_NOT_HORIZONTAL_OR_VERTICAL_MODE					2
-#define CMDERR_INVALID_HVSCROLL_SETTING							3
-#define CMDERR_INVALID_MEMORY_ADDRESSING_MODE					4
-#define CMDERR_INVALID_MUX_RATIO								5
-#define CMDERR_WRONG_COM_PINS_HARDWARE_CONFIGURATION_SEQUENCE	6
-#define CMDERR_WRONG_VCOMH_SETTING_SEQUENCE						7
-#define CMDERR_INVALID_VCOMH_SETTING							8
-#define CMDERR_INVALID_FADEOUT_BLINK_SETTING					9
-#define CMDERR_WRONG_ZOOMIN_SEQUENCE							10
+#define CMDERR_INVALID_HVSCROLL_SETTING							2
+#define CMDERR_INVALID_MEMORY_ADDRESSING_MODE					3
+#define CMDERR_INVALID_MUX_RATIO								4
+#define CMDERR_WRONG_COM_PINS_HARDWARE_CONFIGURATION_SEQUENCE	5
+#define CMDERR_WRONG_VCOMH_SETTING_SEQUENCE						6
+#define CMDERR_INVALID_VCOMH_SETTING							7
+#define CMDERR_INVALID_FADEOUT_BLINK_SETTING					8
+#define CMDERR_WRONG_ZOOMIN_SEQUENCE							9
 #ifdef CHARGE_PUMP_AVALIABLE
-#define CMDERR_WRONG_PUMP_SEQUENCE								11
+#define CMDERR_WRONG_PUMP_SEQUENCE								10
 #endif
 
 static inline int docmd(SSD1306_HANDLE h, uint8_t d) {
@@ -82,26 +81,16 @@ static inline int docmd(SSD1306_HANDLE h, uint8_t d) {
 			h->addrcolnow = (h->addrcolnow & 0xF0) | (d & 0x0F);
 		} else if ((d & 0b11110000) == 0b00010000) {
 			//Set Higher Column Start Address for Page Addressing Mode
-			//TODO addr > 128 -> wraparound?
+			//addr >= 128 -> wraparound
 			h->addrcolnow = (h->addrcolnow & 0x0F) | ((d & 0x07) << 4);
 		} else if (d == 0b00100000) {
 			//Set Memory Addressing Mode
 			h->_cmdpart = CMDPART_SET_MEMORY_ADDRESSING_MODE;
 		} else if (d == 0b00100001) {
 			//Set Column Address (range)
-			if (h->memaddrmode != MEMORY_ADDRESSING_MODE_HORIZONTAL &&
-				h->memaddrmode != MEMORY_ADDRESSING_MODE_VERTICAL) {
-				//TODO ???
-				return CMDERR_NOT_HORIZONTAL_OR_VERTICAL_MODE;
-			}
 			h->_cmdpart = CMDPART_SET_COLUMN_RANGE;
 		} else if (d == 0b00100010) {
 			//Set Page Address (range)
-			if (h->memaddrmode != MEMORY_ADDRESSING_MODE_HORIZONTAL &&
-				h->memaddrmode != MEMORY_ADDRESSING_MODE_VERTICAL) {
-				//TODO ???
-				return CMDERR_NOT_HORIZONTAL_OR_VERTICAL_MODE;
-			}
 			h->_cmdpart = CMDPART_SET_PAGE_RANGE;
 		} else if ((d & 0b11111000) == 0b10110000) {
 			//Set Page Start Address for Page Addressing Mode
@@ -196,23 +185,25 @@ static inline int docmd(SSD1306_HANDLE h, uint8_t d) {
 		h->_cmdpart = 0;
 	} else if (h->_cmdpart == CMDPART_SET_MEMORY_ADDRESSING_MODE) {
 		d &= 0b00000011;
+		h->_cmdpart = 0;
 		if (d == 0b11) {
 			return CMDERR_INVALID_MEMORY_ADDRESSING_MODE;
 		}
 		h->memaddrmode = d;
-		h->_cmdpart = 0;
 	} else if (h->_cmdpart == CMDPART_SET_COLUMN_RANGE) {
 		h->addrcolstart = d & 0b01111111;
 		h->_cmdpart = CMDPART_SET_COLUMN_RANGE + 1;
 	} else if (h->_cmdpart == CMDPART_SET_COLUMN_RANGE + 1) {
 		h->addrcolend = d & 0b01111111;
-		//TODO check for end < start? (+page)
+		//don't check for end < start
+		h->addrcolnow = h->addrcolstart;
 		h->_cmdpart = 0;
 	} else if (h->_cmdpart == CMDPART_SET_PAGE_RANGE) {
 		h->addrpagestart = d & 0b00000111;
 		h->_cmdpart = CMDPART_SET_PAGE_RANGE + 1;
 	} else if (h->_cmdpart == CMDPART_SET_PAGE_RANGE + 1) {
 		h->addrpageend = d & 0b00000111;
+		h->addrpagenow = h->addrpagestart;
 		h->_cmdpart = 0;
 	} else if (h->_cmdpart == CMDPART_SET_MULTIPLEX_RATIO) {
 		d &= 0b00111111;
@@ -267,7 +258,6 @@ static inline int docmd(SSD1306_HANDLE h, uint8_t d) {
 #ifdef CHARGE_PUMP_AVALIABLE
 	} else if (h->_cmdpart == CMDPART_CHARGE_PUMP_SETTING) {
 		h->_cmdpart = 0;
-		d &= 0b00111111;
 		if ((d & 0b00111011) != 0b00010000) {
 			return CMDERR_WRONG_PUMP_SEQUENCE;
 		}
@@ -280,6 +270,8 @@ static inline int docmd(SSD1306_HANDLE h, uint8_t d) {
 }
 
 static inline void dodata(SSD1306_HANDLE h, uint8_t d) {
+	assert(h->addrpagenow < 8);
+	assert(h->addrcolnow < 128);
 	uint8_t paintcolnow;
 	if (h->segmentremap) {
 		paintcolnow = h->addrcolnow;
@@ -296,31 +288,34 @@ static inline void dodata(SSD1306_HANDLE h, uint8_t d) {
 	h->datachanged = true;
 #endif // REDUCE_REFRESHING
 	if (h->memaddrmode == MEMORY_ADDRESSING_MODE_HORIZONTAL) {
-		if (h->addrcolnow == h->addrcolend) {
+		h->addrcolnow += 1;
+		if (h->addrcolnow > h->addrcolend) {
 			h->addrcolnow = h->addrcolstart;
-			if (h->addrpagenow == h->addrpageend) {
-				h->addrpagenow = h->addrpagestart;
-			} else {
-				h->addrpagenow = h->addrpagenow + 1 & 0x07;
-			}
-		} else {
-			h->addrcolnow = h->addrcolnow + 1 & 0x7F;
+			h->addrpagenow += 1;
+		}
+		if (h->addrpagenow > h->addrpageend) {
+			h->addrpagenow = h->addrpagestart;
 		}
 	} else if (h->memaddrmode == MEMORY_ADDRESSING_MODE_VERTICAL) {
-		if (h->addrpagenow == h->addrpageend) {
+		h->addrpagenow += 1;
+		if (h->addrpagenow > h->addrpageend) {
 			h->addrpagenow = h->addrpagestart;
-			if (h->addrcolnow == h->addrcolend) {
-				h->addrcolnow = h->addrcolstart;
-			} else {
-				h->addrcolnow = h->addrcolnow + 1 & 0x7F;
-			}
-		} else {
-			h->addrpagenow = h->addrpagenow + 1 & 0x07;
+			h->addrcolnow += 1;
+		}
+		if (h->addrcolnow > h->addrcolend) {
+			h->addrcolnow = h->addrcolstart;
 		}
 	} else if (h->memaddrmode == MEMORY_ADDRESSING_MODE_PAGE) {
-		h->addrcolnow = h->addrcolnow + 1 & 0x7F;
+		h->addrcolnow += 1;
+		if (h->addrcolnow > h->addrcolend) {
+			h->addrcolnow = h->addrcolstart;
+		}
+		if (h->addrpagenow > h->addrpageend) {
+			h->addrpagenow = h->addrpagestart;
+		}
 	} else {
-		//TODO memaddrmode error
+		//memaddrmode error
+		assert(false);
 	}
 }
 
