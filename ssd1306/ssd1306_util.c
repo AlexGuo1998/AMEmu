@@ -7,7 +7,6 @@
 
 SSD1306_HANDLE ssd1306_new(const char *wndname) {
 	SSD1306_HANDLE h = (SSD1306_HANDLE)malloc(sizeof(SSD1606_STRU));
-	assert(h);//TODO
 	if (h == NULL) {
 		return NULL;
 	}
@@ -111,17 +110,40 @@ void ssd1306_refresh(SSD1306_HANDLE h) {
 		if (!h->displayon) {
 			//disp not on, black
 			memset(h->_colmap, -1, 64);
-		} else if (h->entireon) {
-			//disp all on, white
-			memset(h->_colmap, -2, 64);
 		} else {
-			for (uint8_t i = 0; i < 64; i++) {
-				//TODO
-				h->_colmap[i] = i;
-			}
-			if (h->zoomin) {
+			if (h->comscandirection) {
+				//remapped, upside up
+				uint8_t startline = h->displayoffset + h->dispstartline + h->muxratio;
 				for (uint8_t i = 0; i < 64; i++) {
-					h->_colmap[i] >>= 1;
+					h->_colmap[i] = (startline + i) & 0x3F;
+				}
+				uint8_t blankend = (-h->displayoffset - h->muxratio) & 0x3F;
+				for (uint8_t i = (64 - h->displayoffset) & 0x3F; i != blankend; i = (i + 1) & 0x3F) {
+					h->_colmap[i] = -1;
+				}
+			} else {
+				//not-remapped, upside down
+				uint8_t startline = h->displayoffset + h->dispstartline + 63;
+				for (uint8_t i = 0; i < 64; i++) {
+					h->_colmap[i] = (startline - i) & 0x3F;
+				}
+				uint8_t blankend = (h->displayoffset - h->muxratio) & 0x3F;
+				for (uint8_t i = h->displayoffset; i != blankend; i = (i + 1) & 0x3F) {
+					h->_colmap[i] = -1;
+				}
+			}
+			if (h->entireon) {
+				//disp all on, white
+				for (uint8_t i = 0; i < 64; i++) {
+					if (h->_colmap[i] >= 0) {
+						h->_colmap[i] = -2;
+					}
+				}
+			} else if (h->zoomin) {
+				for (uint8_t i = 0; i < 64; i++) {
+					if (h->_colmap[i] >= 0) {
+						h->_colmap[i] >>= 1;
+					}
 				}
 			} else {
 				if (!h->compinconf) {

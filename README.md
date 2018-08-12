@@ -23,7 +23,10 @@ Under constuction. Please be patient...
   - [ ] ISP
 
 - [ ] Screen emulation
-  - [ ] SSD1306 OLED controller **<- Working On**
+  - [x] SSD1306 OLED controller
+      - _Not implemented:_
+      - [ ] Scrolling
+      - [ ] Contrast, fade, blink, greyscale
   - [x] GUI (with `SDL`)
   - [ ] Integrate with core
 

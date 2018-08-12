@@ -25,8 +25,6 @@
 #define CMDPART_CHARGE_PUMP_SETTING									28
 #endif
 
-
-
 #define CMDERR_INVALID_COMMAND									1
 #define CMDERR_INVALID_HVSCROLL_SETTING							2
 #define CMDERR_INVALID_MEMORY_ADDRESSING_MODE					3
@@ -107,7 +105,7 @@ static inline int docmd(SSD1306_HANDLE h, uint8_t d) {
 			h->_cmdpart = CMDPART_SET_MULTIPLEX_RATIO;
 		} else if ((d & 0b11110111) == 0b11000000) {
 			//Set COM Output Scan Direction
-			h->comscandirection = d >> 3;
+			h->comscandirection = (d >> 3) & 0b1;
 		} else if (d == 0b11010011) {
 			//Set Display Offset
 			h->_cmdpart = CMDPART_SET_DISPLAY_OFFSET;
@@ -325,7 +323,43 @@ void ssd1306_spishiftin(SSD1306_HANDLE h, uint8_t d) {
 	} else {
 		int ret = docmd(h, d);
 		if (ret != 0) {
-			//TODO report error
+			switch (ret) {
+			case CMDERR_INVALID_COMMAND:
+				DebugPrint("Err: Invalid command\n");
+				break;
+			case CMDERR_INVALID_HVSCROLL_SETTING:
+				DebugPrint("Err: Invalid vertical and horzontal scroll setup\n");
+				break;
+			case CMDERR_INVALID_MEMORY_ADDRESSING_MODE:
+				DebugPrint("Err: Invalid memory addressing mode\n");
+				break;
+			case CMDERR_INVALID_MUX_RATIO:
+				DebugPrint("Err: Invalid multiplex ratio\n");
+				break;
+			case CMDERR_WRONG_COM_PINS_HARDWARE_CONFIGURATION_SEQUENCE:
+				DebugPrint("Err: Wrong com pins hardware configuration sequence\n");
+				break;
+			case CMDERR_WRONG_VCOMH_SETTING_SEQUENCE:
+				DebugPrint("Err: Wrong vcomh deselect level setup sequence\n");
+				break;
+			case CMDERR_INVALID_VCOMH_SETTING:
+				DebugPrint("Err: Invalid vcomh setting\n");
+				break;
+			case CMDERR_INVALID_FADEOUT_BLINK_SETTING:
+				DebugPrint("Err: Invalid fadeout / blink mode setting\n");
+				break;
+			case CMDERR_WRONG_ZOOMIN_SEQUENCE:
+				DebugPrint("Err: Wrong zoom-in setup sequence\n");
+				break;
+#ifdef CHARGE_PUMP_AVALIABLE
+			case CMDERR_WRONG_PUMP_SEQUENCE:
+				DebugPrint("Err: Wrong charge pump setup sequence");
+				break;
+#endif
+			default:
+				DebugPrint("Err: Unknown error\n");
+				break;
+			}
 		}
 		h->remapchanged = true;//TODO
 	}

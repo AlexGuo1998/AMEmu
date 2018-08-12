@@ -103,6 +103,10 @@ static const uint8_t bootseq[] = {
 	0x0af,				/* display on */
 };
 
+void DebugPrint(const char *str) {
+	fputs(str, stderr);
+}
+
 int SDLCALL thddatafetch(void *d) {
 	SSD1306_HANDLE h = (SSD1306_HANDLE)d;
 	char buf[128];
